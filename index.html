@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conflict Mouse Trap | Specialist Training</title>
+    
+    <!-- URL FIXER -->
+    <script>
+        if (window.location.pathname.endsWith('.html/')) {
+            window.location.replace(window.location.href.replace('.html/', '.html'));
+        }
+    </script>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #020617;
+            color: #f8fafc;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* 16:9 Machine Layout - Scaled for image_8aca7c.jpg */
+        #machine-wrapper {
+            max-height: 65vh; 
+            width: 100%;
+            aspect-ratio: 16 / 9; 
+            margin: 0 auto;
+            position: relative;
+            background-color: #1e293b; 
+            border-radius: 20px;
+            box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.9);
+            overflow: hidden;
+            border: 4px solid #334155;
+        }
+
+        #machine-image {
+            width: 100%;
+            height: 100%;
+            object-fit: fill; 
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 0;
+        }
+
+        /* Interactive Nodes positioned specifically for the Mouse Trap image */
+        .stage-node {
+            position: absolute;
+            background: rgba(15, 23, 42, 0.6);
+            border: 3px dashed rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transform: translate(-50%, -50%);
+            z-index: 20;
+        }
+
+        .stage-node:hover:not(.locked) {
+            border: 4px solid #fbbf24;
+            background: rgba(251, 191, 36, 0.2);
+            transform: translate(-50%, -50%) scale(1.1);
+            box-shadow: 0 0 40px rgba(251, 191, 36, 0.6);
+        }
+
+        .stage-active {
+            border: 4px solid #ef4444 !important;
+            box-shadow: 0 0 50px rgba(239, 68, 68, 0.6);
+            animation: pulse-red 2s infinite;
+        }
+
+        .stage-secured {
+            background: rgba(16, 185, 129, 0.4) !important;
+            border: 4px solid #10b981 !important;
+            box-shadow: 0 0 30px rgba(16, 185, 129, 0.6);
+        }
+
+        @keyframes pulse-red {
+            0% { transform: translate(-50%, -50%) scale(1); border-color: #ef4444; }
+            50% { transform: translate(-50%, -50%) scale(1.05); border-color: #fca5a5; }
+            100% { transform: translate(-50%, -50%) scale(1); border-color: #ef4444; }
+        }
+
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .phase-hidden { display: none !important; }
+        .phase-active { display: flex; animation: fadeIn 0.6s ease-out; }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .avatar-frame {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center 15%;
+            border-radius: 50%;
+        }
+
+        .buzzer-flash {
+            position: absolute;
+            inset: 0;
+            background-color: rgba(239, 68, 68, 0.4);
+            z-index: 50;
+            pointer-events: none;
+            animation: flash 0.3s ease-out;
+        }
+
+        @keyframes flash {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+    </style>
+</head>
+<body class="p-4 lg:p-6">
+
+    <!-- Header -->
+    <header class="w-full max-w-7xl mx-auto mb-4 flex justify-between items-center px-2">
+        <div class="flex flex-col">
+            <h1 class="text-3xl font-black tracking-tighter text-amber-500 uppercase leading-none">The Conflict Trap</h1>
+            <p class="text-slate-500 text-[10px] font-black uppercase tracking-[0.3em] mt-1">
+                De-activate the Chain Reaction | Protect the Team
+            </p>
+        </div>
+        <div id="trap-status" class="flex items-center gap-4 bg-slate-800 p-3 rounded-2xl border border-slate-700 shadow-lg">
+            <span class="text-[10px] font-black uppercase text-slate-400">Heat Level:</span>
+            <div class="w-48 h-4 bg-slate-950 rounded-full overflow-hidden border border-slate-800 p-1">
+                <div id="meter-fill" class="w-0 h-full bg-blue-500 transition-all duration-1000 rounded-full"></div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Phase 1: Briefing -->
+    <div id="phase-briefing" class="phase-active flex-col w-full max-w-4xl glass-panel rounded-[40px] p-10 lg:p-14 shadow-2xl mt-6 mx-auto relative overflow-hidden">
+        <div class="grid md:grid-cols-[1fr_300px] gap-12 items-center relative z-10">
+            <div class="space-y-8 text-left">
+                <div class="flex items-center gap-4 text-amber-400">
+                    <i data-lucide="mouse" class="w-10 h-10"></i>
+                    <h2 class="text-4xl font-black uppercase tracking-tight">Mission: Trap Reset</h2>
+                </div>
+                
+                <div class="bg-slate-950/80 p-8 rounded-3xl border-l-[12px] border-amber-500 shadow-inner">
+                    <p class="font-mono text-xs text-amber-500/60 mb-3 uppercase tracking-[0.4em] font-bold">Alert Level: High</p>
+                    <p class="text-2xl italic text-slate-100 leading-tight font-light">
+                        "A patient interaction has stalled. If the chain reaction continues, the 'Incident Report' cage will drop. You must stabilize the machine."
+                    </p>
+                </div>
+                
+                <p class="text-lg text-slate-400 leading-relaxed font-light">
+                    Navigate the machine components. At each step, select the <strong>Structural Technique</strong> to prevent the reaction from spreading. One bad choice springs the trap!
+                </p>
+
+                <button onclick="startGame()" class="w-full bg-amber-600 hover:bg-amber-500 text-white font-black py-5 rounded-3xl transition-all flex items-center justify-center gap-4 text-xl shadow-[0_15px_40px_rgba(245,158,11,0.3)] transform active:scale-95">
+                    STABILIZE THE CLINIC <i data-lucide="shield" class="w-7 h-7"></i>
+                </button>
+            </div>
+
+            <div class="flex flex-col items-center gap-6">
+                <div class="w-64 h-64 rounded-[40px] border-4 border-amber-500/30 p-1 shadow-2xl bg-slate-900 overflow-hidden">
+                    <img src="https://thesimpleaiguide-create.github.io/operation-deescalation/patience-avatar.jpeg" alt="Patience Waites" class="avatar-frame">
+                </div>
+                <div class="text-center">
+                    <p class="text-2xl font-black text-white uppercase tracking-tighter italic">Agent Waites</p>
+                    <p class="text-[10px] text-amber-500 uppercase font-black tracking-widest opacity-80">Conflict Technician</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Phase 2: Game Board -->
+    <div id="phase-playing" class="phase-hidden flex-col w-full max-w-7xl mx-auto flex-col lg:flex-row gap-6 h-[calc(100vh-140px)]">
+        <div class="flex-1 flex flex-col gap-4 overflow-hidden">
+            <div id="machine-wrapper">
+                <img id="machine-image" src="https://thesimpleaiguide-create.github.io/operation-deescalation/mousetrap-bg.jpeg" alt="Machine">
+                <div id="nodes-layer"></div>
+                <div id="buzzer-overlay" class="hidden"></div>
+            </div>
+            
+            <div class="glass-panel p-4 rounded-2xl border border-slate-700 flex items-center justify-center gap-4 shadow-xl">
+                <div id="status-indicator" class="w-3 h-3 rounded-full bg-blue-500 animate-pulse"></div>
+                <p id="instruction-text" class="text-sm font-black text-slate-300 uppercase tracking-[0.2em]">Engage the active component to begin...</p>
+            </div>
+        </div>
+
+        <!-- Chain reaction Log Sidebar -->
+        <div class="w-full lg:w-[380px] flex flex-col h-full overflow-hidden">
+            <div class="glass-panel rounded-[32px] p-8 flex-1 flex flex-col overflow-hidden shadow-xl">
+                <div class="flex justify-between items-center mb-6 pb-4 border-b border-white/10">
+                    <h3 class="text-xs font-black text-slate-400 uppercase tracking-[0.3em] flex items-center gap-3">
+                        <i data-lucide="zap" class="w-5 h-5 text-amber-400"></i> Chain Status
+                    </h3>
+                </div>
+                <div id="chain-log" class="space-y-4 overflow-y-auto pr-2 custom-scrollbar flex-1"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Choice Modal -->
+    <div id="choice-modal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-xl flex items-center justify-center z-50 hidden p-6 overflow-y-auto">
+        <div class="bg-slate-800 rounded-[50px] border-4 border-slate-700 w-full max-w-2xl p-8 lg:p-10 shadow-3xl overflow-hidden relative my-auto">
+            <div id="modal-accent" class="absolute top-0 left-0 w-full h-2 bg-amber-500"></div>
+            
+            <div class="flex items-center gap-6 mb-6">
+                <div id="modal-icon-box" class="p-5 bg-slate-900 rounded-[28px] text-amber-500 shadow-inner"></div>
+                <div>
+                    <h3 id="modal-title" class="text-3xl font-black uppercase tracking-tighter text-white"></h3>
+                    <p class="text-slate-500 text-xs uppercase font-black tracking-widest mt-1">Mechanism Fault Detected</p>
+                </div>
+            </div>
+
+            <p id="modal-desc" class="text-lg text-slate-300 mb-8 italic leading-relaxed font-light pl-6 border-l-4 border-slate-600"></p>
+
+            <div class="space-y-4">
+                <p class="text-[11px] font-black text-slate-500 uppercase tracking-[0.3em] ml-2">Select Stabilizing Action:</p>
+                <div id="tool-options" class="grid gap-3"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Final Result -->
+    <div id="phase-result" class="phase-hidden flex-col w-full max-w-3xl mx-auto text-center mt-6">
+        <div id="result-icon-container" class="w-32 h-32 rounded-[40px] flex items-center justify-center mx-auto mb-8 shadow-2xl scale-110"></div>
+        <h2 id="result-title" class="text-6xl font-black uppercase mb-4 tracking-tighter"></h2>
+        <p id="result-body" class="text-xl text-slate-300 mb-12 leading-relaxed max-w-2xl mx-auto font-light"></p>
+        <button onclick="location.reload()" class="bg-slate-100 hover:bg-white text-slate-900 font-black py-6 px-12 rounded-3xl text-xl shadow-2xl transition-all transform active:scale-95">
+            RESET SIMULATION
+        </button>
+    </div>
+
+    <script>
+        // --- AUDIO ENGINE ---
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playSound(freq, type, duration) {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration);
+        }
+
+        // --- STAGES MAPPED TO image_8aca7c.jpg ---
+        const stages = [
+            {
+                id: 'crank',
+                name: 'The Telephone Crank',
+                desc: 'The phone rings. The patient is already mid-sentence, venting about their referral delay.',
+                icon: 'phone-incoming',
+                top: '75%', left: '18%', width: '15%', height: '25%',
+                options: [
+                    { text: 'Acknowledge and set purpose: "I can help with that. I will ask a few questions to get this sorted."', correct: true, feedback: 'CRANK SECURED! You established role and pace immediately.' },
+                    { text: 'Wait for them to finish the full explanation before asking for their name.', correct: false, feedback: 'REACTION! The vacuum allowed the patient to hijack the call pace.' },
+                    { text: 'Interrupt immediately with: "Who is speaking, please? I can\'t help without a name."', correct: false, feedback: 'REACTION! Blunt shutdowns trigger the "Dismissal" hidden driver.' },
+                    { text: 'Apologize profusely for the delay before they even mention a specific problem.', correct: false, feedback: 'REACTION! Over-apologizing invites Entitled dominance.' },
+                    { text: 'Open with: "The clinic is very busy today, what do you need?"', correct: false, feedback: 'REACTION! Leading with pressure creates an adversarial frame.' }
+                ]
+            },
+            {
+                id: 'gears',
+                name: 'The Emotional Gears',
+                desc: 'Patient says: "If you lot actually cared, you wouldn\'t make me wait like this!"',
+                icon: 'settings',
+                top: '25%', left: '22%', width: '25%', height: '35%',
+                options: [
+                    { text: 'Respond to the need: "I want to make sure you feel supported. Let\'s look at the options."', correct: true, feedback: 'GEARS STABILIZED! You responded to the need, not the bait.' },
+                    { text: 'Defend the system: "I do care, but we serve 15,000 patients and we are very busy."', correct: false, feedback: 'REACTION! Defending the system feels like a personal dismissal.' },
+                    { text: 'Argue the point: "That\'s not fair, we work very hard here to help everyone."', correct: false, feedback: 'REACTION! You took the bait. The contact is now about YOU, not the patient.' },
+                    { text: 'Stay silent and let the comment pass without any acknowledgement.', correct: false, feedback: 'REACTION! Silence registers as coldness, fueling further attack.' },
+                    { text: 'Tell the patient: "There is no need for that kind of language, let\'s be professional."', correct: false, feedback: 'REACTION! Moral lectures escalate Indignant behavior.' }
+                ]
+            },
+            {
+                id: 'slide',
+                name: 'The Slide to Inevitability',
+                desc: 'The patient is narrating a long history of a 2021 referral that is unrelated to today\'s request.',
+                icon: 'trending-down',
+                top: '30%', left: '55%', width: '30%', height: '20%',
+                options: [
+                    { text: 'Skilled Redirect: "I\'ve noted that history. Can I just pause you to check what is worrying you most today?"', correct: true, feedback: 'SLIDE BLOCKED! You validated the history but regained pace control.' },
+                    { text: 'Let them finish the story so they feel "heard" for the next 10 minutes.', correct: false, feedback: 'REACTION! Passive management wastes empathy time and leads to burnout.' },
+                    { text: 'Stop them abruptly: "That happened 3 years ago, let\'s stay on today."', correct: false, feedback: 'REACTION! Abruptness without validation feels like a social offense.' },
+                    { text: 'Start checking their 2021 file while they talk to see if they are right.', correct: false, feedback: 'REACTION! Drifting into history increases call length and clinical risk.' },
+                    { text: 'Say "Mmm-hmm" and "Yes" repeatedly to encourage them to finish.', correct: false, feedback: 'REACTION! Passive listening signals that you have no professional structure.' }
+                ]
+            },
+            {
+                id: 'cage',
+                name: 'The Incident Report Cage',
+                desc: 'The interaction is ending. You need to ensure the "snap back" (repeat call or complaint) doesn\'t happen.',
+                icon: 'lock',
+                top: '60%', left: '82%', width: '20%', height: '40%',
+                options: [
+                    { text: 'Clean Close: "To confirm, the GP will call by 4pm today. Does that make sense?"', correct: true, feedback: 'TRAP DISMANTLED! Specificity and confirmation removed the anxiety gap.' },
+                    { text: 'Vague Close: "We\'ll sort that for you then. Goodbye!"', correct: false, feedback: 'TRAP SPRUNG! Ambiguity leads to repeat contacts and anxiety.' },
+                    { text: 'Weak Safety Net: "Call us back if you haven\'t heard anything later."', correct: false, feedback: 'TRAP SPRUNG! Non-specific timelines generate "just-in-case" calls.' },
+                    { text: 'Shift responsibility: "Someone will be in touch shortly. Have a nice day."', correct: false, feedback: 'TRAP SPRUNG! "Someone" and "shortly" are the biggest anxiety generators.' },
+                    { text: 'Just hang up once the appointment is booked in the system.', correct: false, feedback: 'TRAP SPRUNG! No verbal confirmation leads to misunderstandings.' }
+                ]
+            }
+        ];
+
+        let state = {
+            currentStageIdx: 0,
+            secured: [],
+            trapHeat: 0,
+            currentOptions: []
+        };
+
+        function startGame() {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            document.getElementById('phase-briefing').classList.add('phase-hidden');
+            document.getElementById('phase-playing').classList.remove('phase-hidden');
+            document.getElementById('phase-playing').classList.add('flex');
+            renderNodes();
+            updateLog();
+            lucide.createIcons();
+        }
+
+        function renderNodes() {
+            const container = document.getElementById('nodes-layer');
+            container.innerHTML = stages.map((s, idx) => {
+                const isActive = idx === state.currentStageIdx;
+                const isSecured = state.secured.includes(s.id);
+                let cls = `stage-node ${isActive ? 'stage-active' : ''} ${isSecured ? 'stage-secured' : ''}`;
+                if (idx > state.currentStageIdx) cls += ' locked opacity-10 cursor-not-allowed';
+                
+                return `
+                    <div id="node-${s.id}" class="${cls}" 
+                         style="top: ${s.top}; left: ${s.left}; width: ${s.width}; height: ${s.height};" 
+                         onclick="openChoice(${idx})">
+                         <i data-lucide="${s.icon}" class="w-10 h-10 text-white/50"></i>
+                    </div>
+                `;
+            }).join('');
+            lucide.createIcons();
+        }
+
+        function openChoice(idx) {
+            if (idx !== state.currentStageIdx || state.secured.includes(stages[idx].id)) return;
+
+            const stage = stages[idx];
+            document.getElementById('modal-title').innerText = stage.name;
+            document.getElementById('modal-desc').innerText = stage.desc;
+            document.getElementById('modal-icon-box').innerHTML = `<i data-lucide="${stage.icon}" class="w-12 h-12"></i>`;
+            
+            state.currentOptions = [...stage.options].sort(() => Math.random() - 0.5);
+
+            const optionsHtml = state.currentOptions.map((opt, oIdx) => `
+                <button onclick="handleChoice(${oIdx})" class="w-full text-left p-4 lg:p-5 rounded-3xl bg-slate-900 border-2 border-slate-700 hover:border-amber-500 hover:bg-slate-850 transition-all group flex justify-between items-center">
+                    <span class="max-w-[90%] text-sm font-medium leading-relaxed">${opt.text}</span>
+                    <i data-lucide="play-circle" class="w-5 h-5 opacity-0 group-hover:opacity-100 text-amber-400 flex-shrink-0"></i>
+                </button>
+            `).join('');
+            
+            document.getElementById('tool-options').innerHTML = optionsHtml;
+            document.getElementById('choice-modal').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function handleChoice(oIdx) {
+            const option = state.currentOptions[oIdx];
+            const isCorrect = option.correct;
+            const modal = document.getElementById('choice-modal');
+            const instruct = document.getElementById('instruction-text');
+            
+            modal.classList.add('hidden');
+
+            if (isCorrect) {
+                playSound(800, 'sine', 0.3);
+                state.secured.push(stages[state.currentStageIdx].id);
+                state.currentStageIdx++;
+                instruct.innerText = option.feedback;
+                instruct.className = "text-sm font-black text-emerald-400 uppercase tracking-widest";
+            } else {
+                playSound(120, 'sawtooth', 0.5);
+                state.trapHeat += 34; // 3 mistakes and trap springs
+                triggerTrapAlert();
+                instruct.innerText = option.feedback;
+                instruct.className = "text-sm font-black text-red-500 uppercase tracking-widest";
+            }
+
+            updateMeter();
+            updateLog();
+            renderNodes();
+            checkGameState();
+        }
+
+        function triggerTrapAlert() {
+            const overlay = document.getElementById('buzzer-overlay');
+            overlay.className = 'buzzer-flash';
+            setTimeout(() => { 
+                overlay.className = 'hidden'; 
+            }, 300);
+        }
+
+        function updateMeter() {
+            const fill = document.getElementById('meter-fill');
+            fill.style.width = `${Math.min(state.trapHeat, 100)}%`;
+            if (state.trapHeat > 70) fill.className = 'w-0 h-full bg-red-600 transition-all duration-1000 rounded-full';
+            else if (state.trapHeat > 40) fill.className = 'w-0 h-full bg-amber-500 transition-all duration-1000 rounded-full';
+        }
+
+        function updateLog() {
+            const log = document.getElementById('chain-log');
+            if (state.secured.length === 0) {
+                log.innerHTML = `<div class="flex flex-col items-center justify-center h-48 opacity-30 italic text-center"><i data-lucide="cpu" class="w-8 h-8 mb-4"></i><p class="text-[10px] uppercase font-black tracking-[0.2em]">System Initializing...<br>Stabilize the Crank.</p></div>`;
+            } else {
+                log.innerHTML = state.secured.map(id => {
+                    const s = stages.find(st => st.id === id);
+                    return `<div class="p-4 rounded-2xl bg-emerald-900/20 border border-emerald-500/30 animate-in slide-in-from-right-4 duration-500"><p class="text-[9px] font-black text-emerald-500 uppercase mb-1">Component Reset</p><p class="text-sm font-bold text-slate-200">${s.name}</p></div>`;
+                }).join('');
+            }
+            lucide.createIcons();
+        }
+
+        function checkGameState() {
+            if (state.trapHeat >= 100) setTimeout(() => endGame(false), 800);
+            else if (state.secured.length === stages.length) setTimeout(() => endGame(true), 800);
+        }
+
+        function endGame(won) {
+            document.getElementById('phase-playing').classList.remove('flex');
+            document.getElementById('phase-playing').classList.add('phase-hidden');
+            document.getElementById('phase-result').classList.remove('phase-hidden');
+            document.getElementById('phase-result').classList.add('flex');
+            
+            const title = document.getElementById('result-title');
+            const body = document.getElementById('result-body');
+            const icon = document.getElementById('result-icon-container');
+
+            if (won) {
+                icon.className = "w-32 h-32 bg-emerald-500 rounded-[40px] flex items-center justify-center mx-auto mb-8 shadow-[0_0_50px_rgba(16,185,129,0.4)]";
+                icon.innerHTML = `<i data-lucide="shield-check" class="w-16 h-16 text-white"></i>`;
+                title.innerText = "CHAIN DISARMED";
+                title.className = "text-5xl font-black uppercase mb-4 tracking-tighter text-emerald-400";
+                body.innerText = "You successfully stabilized the conflict machine! By setting a clear frame and maintaining structure, you prevented the reaction from reaching the Incident Report stage.";
+            } else {
+                icon.className = "w-32 h-32 bg-red-600 rounded-[40px] flex items-center justify-center mx-auto mb-8 shadow-[0_0_50px_rgba(239,68,68,0.4)]";
+                icon.innerHTML = `<i data-lucide="skull" class="w-16 h-16 text-white"></i>`;
+                title.innerText = "TRAP SPRUNG";
+                title.className = "text-5xl font-black uppercase mb-4 tracking-tighter text-red-500";
+                body.innerText = "The conflict reaction completed its circuit. By missing structural cues and taking the bait, the interaction spiralled into a formal incident report. Reset the machine and try again.";
+            }
+            lucide.createIcons();
+        }
+    </script>
+</body>
+</html>
