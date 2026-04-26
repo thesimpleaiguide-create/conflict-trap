@@ -243,6 +243,13 @@
         </button>
     </div>
 
+    <!-- Cinematic Video Transition Overlay -->
+    <div id="video-overlay" class="fixed inset-0 bg-black z-[100] hidden items-center justify-center">
+        <video id="failure-video" class="w-full h-full object-contain" playsinline muted>
+            <source src="https://thesimpleaiguide-create.github.io/conflict-trap/Cage_falls_covering_202604261201.mp4" type="video/mp4">
+        </video>
+    </div>
+
     <script>
         // --- AUDIO ENGINE ---
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -442,6 +449,32 @@
         function endGame(won) {
             document.getElementById('phase-playing').classList.remove('flex');
             document.getElementById('phase-playing').classList.add('phase-hidden');
+            
+            if (!won) {
+                // Play the cinematic failure video
+                const vidOverlay = document.getElementById('video-overlay');
+                const vid = document.getElementById('failure-video');
+                
+                vidOverlay.classList.remove('hidden');
+                vidOverlay.classList.add('flex');
+                
+                // Play video and listen for it to end
+                vid.play().catch(e => {
+                    // Fallback if browser blocks autoplay
+                    finishEndGame(false);
+                });
+
+                vid.onended = () => {
+                    vidOverlay.classList.remove('flex');
+                    vidOverlay.classList.add('hidden');
+                    finishEndGame(false);
+                };
+            } else {
+                finishEndGame(true);
+            }
+        }
+
+        function finishEndGame(won) {
             document.getElementById('phase-result').classList.remove('phase-hidden');
             document.getElementById('phase-result').classList.add('flex');
             
